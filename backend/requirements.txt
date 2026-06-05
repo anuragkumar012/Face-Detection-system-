@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+pydantic
+pydantic-settings
+python-multipart
+opencv-python
+insightface
+onnxruntime
+numpy
+scikit-learn
+alembic
+pyjwt
+websockets
+faiss-cpu
+chromadb

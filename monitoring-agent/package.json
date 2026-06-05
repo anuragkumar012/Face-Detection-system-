@@ -1,0 +1,41 @@
+{
+  "name": "monitoring-agent",
+  "version": "1.0.0",
+  "description": "Silent employee camera monitoring background agent",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && electron .",
+    "package": "tsc && electron-builder"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "electron": "^24.8.8",
+    "electron-builder": "^24.3.0",
+    "typescript": "^5.0.4"
+  },
+  "build": {
+    "appId": "com.company.agent",
+    "productName": "CompanyAgent",
+    "win": {
+      "target": "nsis",
+      "requestedExecutionLevel": "highestAvailable"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "CompanyAgentSetup.exe",
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CompanyAgent",
+      "runAfterFinish": true
+    },
+    "files": [
+      "dist/main.js",
+      "dist/preload.js",
+      "dist/renderer.js",
+      "src/index.html"
+    ]
+  }
+}

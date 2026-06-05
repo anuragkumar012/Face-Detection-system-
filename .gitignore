@@ -1,0 +1,104 @@
+# Dependencies
+node_modules/
+jspm_packages/
+web_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js and frontend build outputs
+.next/
+out/
+build/
+dist/
+/frontend/next-env.d.ts
+/frontend/.vercel
+/frontend/coverage/
+
+# Electron / monitoring-agent build outputs
+.electron-builder-cache/
+.electron-cache/
+*.tsbuildinfo
+
+# Python virtual environments & packages
+venv/
+.venv/
+env/
+.env/
+ENV/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python / C++ Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs, editors & OS noise
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Databases & local storage
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local environment & secret files
+.env
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.local
+*.pem
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Project-specific user uploads and temporary test files
+**/backend/uploads/
+uploads/
+/backend/test.jpg
+backend/.env
+frontend/.env
