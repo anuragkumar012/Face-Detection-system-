@@ -48,12 +48,6 @@ def _upsert_cluster(
     thumbnail_scan_id: int | None = None,
     thumbnail_bbox: dict | None = None,
 ) -> FaceCluster:
-    """Insert or update a FaceCluster row atomically.
-
-    ``face_count_delta`` is added to the existing count (use +1 for new faces,
-    -N when merging clusters away).  Pass ``thumbnail_scan_id`` only when
-    setting or overriding the cover image.
-    """
     from datetime import datetime
     now = datetime.utcnow()
     record = db.query(FaceCluster).filter_by(cluster_id=cluster_id).first()
@@ -523,7 +517,6 @@ def enroll(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/users", response_model=List[UserResponse])
-
 def get_users(request: Request, db: Session = Depends(get_db)):
     users = (
         db.query(User)
@@ -533,7 +526,6 @@ def get_users(request: Request, db: Session = Depends(get_db)):
     return [_serialize_user(user, request) for user in users]
 
 @router.delete("/users/{user_id}")
-
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -542,8 +534,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     uploaded_paths = [embedding.image_path for embedding in user.embeddings if embedding.image_path]
     db.delete(user)
     db.commit()
-
-    # Sync FAISS index: remove all entries belonging to this user.
     face_index.remove_by_user_id(user_id)
 
     for uploaded_path in uploaded_paths:
@@ -553,7 +543,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return {"status": "success", "message": "User deleted"}
 
 @router.post("/recognize-image", response_model=RecognitionResponse)
-
 def recognize_image(
     request: Request,
     file: UploadFile = File(...),
@@ -564,7 +553,6 @@ def recognize_image(
     return {"matches": [r["match"] for r in enriched_results]}
 
 @router.post("/photo-scans", response_model=PhotoScanListResponse)
-
 def scan_uploaded_photos(
     request: Request,
     files: List[UploadFile] = File(...),
@@ -630,7 +618,6 @@ def scan_uploaded_photos(
     return {"scans": scans}
 
 @router.get("/photo-scans", response_model=PhotoScanListResponse)
-
 def get_photo_scans(
     request: Request,
     limit: int = 20,
@@ -646,7 +633,6 @@ def get_photo_scans(
     return {"scans": [_serialize_photo_scan(scan, request) for scan in scans]}
 
 @router.post("/recognize-live", response_model=List[DetectedFace])
-
 def recognize_live(
     request: Request,
     file: UploadFile = File(...),
@@ -730,7 +716,6 @@ def run_background_recognition(device_id: str, file_bytes: bytes, request: Reque
     finally:
         gateway.device_recognition_running[device_id] = False
 
-
 @router.post("/live-preview")
 def update_live_preview(
     request: Request,
@@ -742,17 +727,12 @@ def update_live_preview(
 ):
     from app.services.jwt_helper import verify_device_token
     from app.models.device import Device
-
-    # If source is device, perform JWT authentication and handle immediately
     if source == "device":
         if not device_id:
             raise HTTPException(status_code=400, detail="device_id is required for device source")
-        
-        # Verify JWT Token from Authorization Header
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-        
         token = auth_header.split(" ")[1]
         token_device_id = verify_device_token(token)
         if not token_device_id or token_device_id != device_id:
@@ -806,19 +786,13 @@ def update_live_preview(
 
     # Otherwise, source is "user" or "admin"
     _, img = _read_upload_image(file)
-
     h, w = img.shape[:2]
-    print(f"[LIVE-PREVIEW] source={source} frame={w}x{h}")
-
     detections_payload = None
 
     if source == "user":
-        print(f"[LIVE-PREVIEW] Running InsightFace on {source} frame...")
         try:
             enriched_results = _recognize_and_enrich(img, request, db, realtime=False)
             detections_payload = enriched_results
-            print(f"[LIVE-PREVIEW] Detected {len(enriched_results)} face(s): "
-                  f"{[r['match']['name'] if r.get('match') else 'Unknown' for r in enriched_results]}")
             for res in enriched_results:
                 bbox  = res["bbox"]
                 match = res["match"]
@@ -1006,7 +980,6 @@ def get_session_details(
     return _serialize_presence_session(sess, request)
 
 def _open_camera(cam_src):
-    """Try to open camera using multiple backends (Windows-compatible)."""
     # On Windows, try MSMF first (best), then DSHOW, then auto
     backends = [
         (cv2.CAP_MSMF,  "MSMF (Microsoft Media Foundation)"),
@@ -1025,7 +998,6 @@ def _open_camera(cam_src):
     return None
 
 def generate_frames():
-    """Video streaming generator function."""
     global LATEST_DETECTIONS
     cam_src = settings.CAMERA_SOURCE
     if isinstance(cam_src, str) and cam_src.isdigit():
@@ -1081,7 +1053,6 @@ def generate_frames():
 
 @router.get("/camera-test")
 def camera_test():
-    """Diagnostic endpoint: checks if camera can be opened."""
     cam_src = settings.CAMERA_SOURCE
     if isinstance(cam_src, str) and cam_src.isdigit():
         cam_src = int(cam_src)
@@ -1103,16 +1074,12 @@ def camera_test():
 
 @router.get("/stream")
 def video_feed():
-    """Video streaming route. Put this in the src attribute of an img tag."""
     return StreamingResponse(
         generate_frames(),
         media_type='multipart/x-mixed-replace; boundary=frame'
     )
 
-
-# ----------------------------------------------------
 # People category & Album endpoints
-# ----------------------------------------------------
 
 @router.get("/people", response_model=List[PersonClusterResponse])
 def get_people(request: Request, db: Session = Depends(get_db)):
@@ -1120,8 +1087,6 @@ def get_people(request: Request, db: Session = Depends(get_db)):
     user_lookup = {u.id: u for u in users}
 
     clusters = {}
-
-    # Initialize with all registered users
     for u in users:
         cluster_id = f"user-{u.id}"
         profile_image_url = None
@@ -1787,42 +1752,15 @@ def remove_incorrect_match(
 
     return {"status": "success", "message": "Face match removed and reset to new cluster"}
 
-
-# ---------------------------------------------------------------------------
 # Gap 6 — DBSCAN global re-clustering
-# ---------------------------------------------------------------------------
 
 @router.post("/people/recluster")
 def recluster_people(db: Session = Depends(get_db)):
-    """Re-cluster all unregistered face clusters using DBSCAN.
-
-    Algorithm
-    ---------
-    1. Collect every embedding from ``photo_scans.scan_details`` that belongs
-       to an **unregistered** cluster (i.e. not ``user-{id}``).
-    2. Run ``sklearn.cluster.DBSCAN`` with ``metric="cosine"`` and
-       ``eps = 1 - SIMILARITY_THRESHOLD``.
-    3. Build a remapping table: old_cluster_id → canonical_cluster_id.
-       Registered clusters are *always* kept intact.
-    4. Apply the remapping to every ``scan_details`` JSON blob in the DB.
-    5. Update the ``face_clusters`` table.
-    6. Rebuild the FAISS index.
-
-    This is an on-demand operation; the real-time per-photo greedy assignment
-    is unchanged.
-    """
     from sklearn.cluster import DBSCAN as SklearnDBSCAN
-
     threshold = settings.SIMILARITY_THRESHOLD
-    eps = max(1e-6, 1.0 - threshold)  # cosine distance threshold
-
-    # Registered cluster IDs are anchored — never reassigned.
-    registered_cids = {f"user-{u.id}" for u in db.query(User).all()}
-
-    # -----------------------------------------------------------------------
-    # 1. Collect all unregistered face embeddings
-    # -----------------------------------------------------------------------
-    entries: list[dict] = []
+    eps = max(1e-6, 1.0 - threshold)
+    registered_cids = {f"user-{u.id}" for u in db.query(User).all()}    # Registered cluster IDs are anchored — never reassigned.
+    entries: list[dict] = []    # 1. Collect all unregistered face embeddings
     scans_all = db.query(PhotoScan).all()
 
     for scan in scans_all:
@@ -1849,10 +1787,7 @@ def recluster_people(db: Session = Depends(get_db)):
             "message": "Not enough unregistered faces to recluster.",
             "unregistered_faces": len(entries),
         }
-
-    # -----------------------------------------------------------------------
     # 2. Run DBSCAN
-    # -----------------------------------------------------------------------
     matrix = np.vstack([e["vector"] for e in entries]).astype(np.float32)
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -1861,10 +1796,7 @@ def recluster_people(db: Session = Depends(get_db)):
     db_scan = SklearnDBSCAN(eps=eps, min_samples=1, metric="cosine", algorithm="brute")
     labels = db_scan.fit_predict(matrix_norm)
 
-    # -----------------------------------------------------------------------
     # 3. Choose a canonical cluster_id for each DBSCAN label
-    #    Prefer stable (non-transient) IDs over "upload-*" temp IDs.
-    # -----------------------------------------------------------------------
     label_to_canonical: dict[int, str] = {}
     for i, label in enumerate(labels):
         if label < 0:  # DBSCAN noise — keep as-is
@@ -1891,10 +1823,8 @@ def recluster_people(db: Session = Depends(get_db)):
             "message": "DBSCAN found no clusters to merge.",
             "unregistered_faces": len(entries),
         }
-
-    # -----------------------------------------------------------------------
     # 4. Apply remapping to all scan_details
-    # -----------------------------------------------------------------------
+
     affected_scans: set[int] = set()
     for scan in scans_all:
         if not scan.scan_details:
@@ -1917,9 +1847,8 @@ def recluster_people(db: Session = Depends(get_db)):
 
     db.commit()
 
-    # -----------------------------------------------------------------------
     # 5. Update face_clusters table
-    # -----------------------------------------------------------------------
+
     for old_cid, new_cid in remapping.items():
         old_rec = db.query(FaceCluster).filter_by(cluster_id=old_cid).first()
         old_count = old_rec.face_count if old_rec else 0
@@ -1928,9 +1857,7 @@ def recluster_people(db: Session = Depends(get_db)):
         _upsert_cluster(db, new_cid, label=f"Cluster {new_cid}", face_count_delta=old_count)
     db.commit()
 
-    # -----------------------------------------------------------------------
     # 6. Rebuild FAISS index
-    # -----------------------------------------------------------------------
     face_index.rebuild_from_db(db)
 
     return {

@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 def format_duration(seconds: float) -> str:
-    """Format duration in HH:MM:SS format."""
     s = int(round(seconds))
     hours, remainder = divmod(s, 3600)
     minutes, secs = divmod(remainder, 60)
@@ -25,7 +24,6 @@ def format_duration(seconds: float) -> str:
 
 
 def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
-    """Calculate the cosine similarity between two 1D arrays."""
     if v1 is None or v2 is None:
         return 0.0
     v1_flat = v1.flatten()
@@ -39,7 +37,6 @@ def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
 
 
 def _has_relative_positions(landmarks: dict[str, dict[str, int]]) -> bool:
-    """Validate relative keypoint alignment to determine if face is frontal/visible."""
     left_eye = landmarks.get("left_eye")
     right_eye = landmarks.get("right_eye")
     nose = landmarks.get("nose")
@@ -64,45 +61,26 @@ def _has_relative_positions(landmarks: dict[str, dict[str, int]]) -> bool:
 
 
 class PresenceTracker:
-    """Tracks presence of detected people in real-time.
-
-    Avoids creating duplicate logs by tracking session state per person ID.
-    Performs database writes in a throttled heartbeat and finishes sessions upon timeout.
-    """
 
     def __init__(self) -> None:
-        # person_id -> dict containing tracking info:
-        # { session_id, entry_time, last_seen, name, user_id, detection_type, confidences,
-        #   best_score, best_frame_path, best_embedding, timeline, last_db_write_time,
-        #   last_timeline_log_time, associated_track_ids }
-        self.active_sessions: dict[str, dict] = {}
-        
-        # track_id -> person_id
-        self.track_to_person: dict[int, str] = {}
 
-        # list of recently ended session dicts:
-        # [ { ..., ended_at: datetime } ]
+        self.active_sessions: dict[str, dict] = {}
+        self.track_to_person: dict[int, str] = {}
         self.recent_sessions: list[dict] = []
-        
-        # track_id -> cached recognition dict:
-        # { name, user_id, confidence, embedding, det_score, landmarks, last_recognition_time }
         self.recognition_cache: dict[int, dict] = {}
 
     @property
     def gateway(self):
-        """Lazy load WebSocketGateway to avoid circular imports."""
         from app.api.websocket_gateway import gateway
         return gateway
 
     def get_cached_recognition(self, track_id: int) -> dict | None:
-        """Retrieve the cached face recognition results for a track ID."""
         return self.recognition_cache.get(track_id)
 
     def cache_recognition(
         self, track_id: int, name: str, user_id: int | None, confidence: float,
         embedding = None, det_score: float = 0.0, landmarks = None
     ) -> None:
-        """Cache face recognition results including the embedding for a track ID."""
         self.recognition_cache[track_id] = {
             "name": name,
             "user_id": user_id,
@@ -114,11 +92,9 @@ class PresenceTracker:
         }
 
     def clear_track_cache(self, track_id: int) -> None:
-        """Clear the cached recognition for a track ID."""
         self.recognition_cache.pop(track_id, None)
 
     def process_frame(self, db: Session, tracks_data: list[dict], frame_img, broadcast_callback=None) -> None:
-        """Process tracking data from the current frame to manage presence log/session lifecycles."""
         now = datetime.utcnow()
         current_timestamp = time.time()
 
@@ -408,7 +384,6 @@ class PresenceTracker:
             active_person_ids.add(person_id)
 
     def check_expired_sessions(self, db: Session, broadcast_callback=None) -> None:
-        """Check for active sessions that have disappeared for longer than threshold (15 seconds)."""
         now = datetime.utcnow()
         absence_threshold_seconds = 15.0
         expired_person_ids = []
@@ -465,7 +440,6 @@ class PresenceTracker:
             self.active_sessions.pop(person_id, None)
 
     def end_all_active_sessions(self, db: Session, broadcast_callback=None) -> list[dict]:
-        """End all active presence sessions immediately (e.g. when the agent goes offline)."""
         now = datetime.utcnow()
         ended_sessions_data = []
         active_ids = list(self.active_sessions.keys())

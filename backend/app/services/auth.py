@@ -1,8 +1,6 @@
 import hashlib
 import hmac
-
 from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.models.account import Account
 

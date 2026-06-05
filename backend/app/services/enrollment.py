@@ -15,16 +15,6 @@ def enroll_user(
     photo_scan_id: int | None = None,
     angle: str | None = None,
 ) -> User:
-    """Detect, validate quality, check duplicate enrollment, and persist a user embedding.
-
-    Args:
-        db:            Active SQLAlchemy session.
-        name:          Display name for the enrolled person.
-        image:         BGR image containing exactly one face.
-        image_path:    Path to the saved image file (for UI display).
-        photo_scan_id: ID of the ``PhotoScan`` that sourced this enrollment.
-        angle:         Optional angle of the face (e.g. front, left, right, up, down).
-    """
     faces = embedder.get_embeddings(image)
 
     # 1. Face Count Validation
@@ -70,7 +60,6 @@ def enroll_user(
     db_user = db.query(User).filter(User.name == name).first()
 
     if match_res["matched"]:
-        # If the matched user is different from the one being updated/created, reject it
         if db_user is None or match_res["user_id"] != db_user.id:
             raise FaceDetectionError(f"Face already enrolled as {match_res['name']}")
 

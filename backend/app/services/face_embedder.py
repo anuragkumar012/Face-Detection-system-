@@ -3,11 +3,6 @@ from insightface.app import FaceAnalysis
 
 
 class FaceEmbeddingResult(dict):
-    """Result containing face detection details and normalized embedding.
-
-    Allows both dict key access (face["embedding"]) and attribute access
-    (face.embedding) for backward compatibility.
-    """
     @property
     def embedding(self) -> np.ndarray:
         return self["embedding"]
@@ -28,16 +23,6 @@ class FaceEmbeddingResult(dict):
 
 
 class FaceEmbedder:
-    """Wraps InsightFace buffalo_l for face detection and ArcFace embedding.
-
-    Two model instances are maintained:
-      * ``self.app``      — buffalo_l at 640×640.  Full-quality; used for photo
-                           uploads where accuracy is paramount.
-      * ``self.fast_app`` — buffalo_l at 320×320.  Speed-optimised; used for the
-                           live/realtime video path.  Both share the same RetinaFace
-                           detector so they handle tilted, profile, and rotated faces
-                           equally well.
-    """
 
     def __init__(self):
         self.app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
@@ -46,22 +31,16 @@ class FaceEmbedder:
         self.fast_app.prepare(ctx_id=0, det_size=(320, 320))
 
     def detect_faces(self, image: np.ndarray) -> list[np.ndarray]:
-        """Detect faces using the fast (320×320) model.
-
-        Returns a list of bounding boxes as ``[x1, y1, x2, y2]`` int32 arrays.
-        """
         faces = self.fast_app.get(image)
         return [face.bbox.astype(np.int32) for face in faces]
 
     def normalize_embedding(self, embedding: np.ndarray) -> np.ndarray:
-        """L2 normalize a 1D float32 embedding vector."""
         norm = np.linalg.norm(embedding)
         if norm == 0.0:
             return embedding
         return (embedding / norm).astype(np.float32)
 
     def create_embedding(self, face_obj) -> FaceEmbeddingResult:
-        """Create a normalized FaceEmbeddingResult from an InsightFace face object."""
         raw_emb = face_obj.embedding.astype(np.float32)
         norm_emb = self.normalize_embedding(raw_emb)
         bbox = face_obj.bbox.astype(np.int32)
@@ -73,7 +52,6 @@ class FaceEmbedder:
         )
 
     def _extract_embedding_from_crop(self, face_crop: np.ndarray) -> np.ndarray | None:
-        """Extract ArcFace embedding from a pre-cropped face region."""
         faces = self.app.get(face_crop)
         if not faces:
             return None
@@ -84,7 +62,6 @@ class FaceEmbedder:
         return self.normalize_embedding(best_face.embedding.astype(np.float32))
 
     def _extract_embedding_and_quality_from_crop(self, face_crop: np.ndarray):
-        """Extract ArcFace embedding and full face object from a pre-cropped face region."""
         faces = self.app.get(face_crop)
         if not faces:
             return None, None
@@ -97,14 +74,6 @@ class FaceEmbedder:
     def get_embeddings(
         self, image: np.ndarray, realtime: bool = False
     ) -> list[FaceEmbeddingResult]:
-        """Extract faces and ArcFace embeddings from *image*.
-
-        Args:
-            image:    BGR image as a NumPy array.
-            realtime: When ``True``, use the fast 320×320 detector for bounding
-                      boxes, then run ArcFace only on each cropped region.
-                      When ``False``, use the full 640×640 model end-to-end.
-        """
         if not realtime:
             detected = self.app.get(image)
             return [self.create_embedding(face) for face in detected]

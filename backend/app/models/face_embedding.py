@@ -9,9 +9,6 @@ class FaceEmbedding(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    # photo_scan_id links this embedding back to the scan that sourced it,
-    # providing full referential traceability.  SET NULL on scan deletion so
-    # the embedding is kept even if the original scan record is removed.
     photo_scan_id = Column(
         Integer,
         ForeignKey("photo_scans.id", ondelete="SET NULL"),

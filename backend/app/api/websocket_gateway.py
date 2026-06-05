@@ -1,9 +1,14 @@
 import json
 import asyncio
+import os
 from datetime import datetime, timedelta
 from fastapi import WebSocket, WebSocketDisconnect
 from app.db.session import SessionLocal
 from app.services.metrics_aggregator import metrics_aggregator
+from app.models.device import Device
+from app.models.presence_session import PresenceSession
+from app.models.dashboard_session_history import DashboardSessionHistory
+from app.services.presence_tracker import presence_tracker
 
 class WebSocketGateway:
     def __init__(self):
@@ -18,7 +23,6 @@ class WebSocketGateway:
         await websocket.accept()
         self.active_connections.append(websocket)
         self.main_loop = asyncio.get_running_loop()
-        print(f"[WebSocket] Client connected. Total connections: {len(self.active_connections)}")
 
         if device_id:
             from app.services.jwt_helper import verify_device_token
@@ -26,7 +30,6 @@ class WebSocketGateway:
             
             verified_id = verify_device_token(token) if token else None
             if not verified_id or verified_id != device_id:
-                print(f"[WebSocket] Device {device_id} token verification failed.")
                 if websocket in self.active_connections:
                     self.active_connections.remove(websocket)
                 await websocket.close(code=4001, reason="Invalid token")
@@ -67,7 +70,6 @@ class WebSocketGateway:
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            print(f"[WebSocket] Client disconnected. Total connections: {len(self.active_connections)}")
 
             # Find if this was a device connection
             device_id = None
@@ -81,13 +83,6 @@ class WebSocketGateway:
                 self.handle_device_disconnect_sync(device_id)
 
     def handle_device_disconnect_sync(self, device_id: str):
-        from app.models.device import Device
-        from app.models.presence_session import PresenceSession
-        from app.models.dashboard_session_history import DashboardSessionHistory
-        from app.services.presence_tracker import presence_tracker
-        import os
-
-        print(f"[WebSocket] Handling disconnect for device: {device_id}")
         db = SessionLocal()
         try:
             device = db.query(Device).filter(Device.device_id == device_id).first()

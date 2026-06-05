@@ -5,13 +5,6 @@ from app.services.face_embedder import embedder
 
 
 def recognize_faces_in_image(image: np.ndarray, db: Session | None = None, realtime: bool = False) -> list[dict]:
-    """Detect faces, generate embeddings, search ChromaDB, and update presence tracker.
-
-    Args:
-        image:    BGR image array.
-        db:       Optional database session for presence tracking updates.
-        realtime: Whether to run in speed-optimized realtime mode.
-    """
     faces = embedder.get_embeddings(image, realtime=realtime)
     
     results = []
@@ -20,9 +13,7 @@ def recognize_faces_in_image(image: np.ndarray, db: Session | None = None, realt
     for fi, face in enumerate(faces):
         bbox = face.bbox.astype(int).tolist()
         embedding = face.embedding
-        
-        # Search ChromaDB and verify similarity using the matching engine
-        match_res = matcher.verify_match(embedding)
+        match_res = matcher.verify_match(embedding) # Search ChromaDB and verify similarity using the matching engine
         user_id = match_res["user_id"]
         name = match_res["name"]
         conf = match_res["score"]

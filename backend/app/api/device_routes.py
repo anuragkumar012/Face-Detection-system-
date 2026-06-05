@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
-
 from app.db.session import get_db
 from app.models.device import Device
 from app.schemas.device import DeviceRegister, DeviceHeartbeat, DeviceResponse

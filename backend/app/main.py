@@ -22,12 +22,6 @@ from app.services.auth import seed_default_accounts
 
 
 def _apply_db_migrations(eng) -> None:
-    """Safely add new columns to existing tables without Alembic.
-
-    Uses SQLAlchemy's inspect() to check whether each column already exists
-    before issuing ALTER TABLE, making this idempotent and safe on every
-    startup for both SQLite and MySQL.
-    """
     from sqlalchemy import inspect as sa_inspect, text
 
     inspector = sa_inspect(eng)
@@ -45,7 +39,6 @@ def _apply_db_migrations(eng) -> None:
                     "REFERENCES photo_scans(id) ON DELETE SET NULL"
                 ))
                 conn.commit()
-            print("[Migration] Added face_embeddings.photo_scan_id")
         
         if "angle" not in cols:
             with eng.connect() as conn:
@@ -53,7 +46,6 @@ def _apply_db_migrations(eng) -> None:
                     "ALTER TABLE face_embeddings ADD COLUMN angle VARCHAR(50)"
                 ))
                 conn.commit()
-            print("[Migration] Added face_embeddings.angle")
 
     # --- presence_logs ---
     if "presence_logs" in existing_tables:
@@ -64,21 +56,18 @@ def _apply_db_migrations(eng) -> None:
                     "ALTER TABLE presence_logs ADD COLUMN entry_time DATETIME"
                 ))
                 conn.commit()
-            print("[Migration] Added presence_logs.entry_time")
         if "exit_time" not in cols:
             with eng.connect() as conn:
                 conn.execute(text(
                     "ALTER TABLE presence_logs ADD COLUMN exit_time DATETIME"
                 ))
                 conn.commit()
-            print("[Migration] Added presence_logs.exit_time")
         if "confidence" not in cols:
             with eng.connect() as conn:
                 conn.execute(text(
                     "ALTER TABLE presence_logs ADD COLUMN confidence FLOAT DEFAULT 0.0"
                 ))
                 conn.commit()
-            print("[Migration] Added presence_logs.confidence")
 
     # --- presence_sessions ---
     if "presence_sessions" in existing_tables:
@@ -87,42 +76,34 @@ def _apply_db_migrations(eng) -> None:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN entry_time DATETIME"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.entry_time")
         if "exit_time" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN exit_time DATETIME"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.exit_time")
         if "best_frame_path" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN best_frame_path VARCHAR(512)"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.best_frame_path")
         if "average_confidence" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN average_confidence FLOAT DEFAULT 0.0"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.average_confidence")
         if "max_confidence" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN max_confidence FLOAT DEFAULT 0.0"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.max_confidence")
         if "detection_type" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN detection_type VARCHAR(20)"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.detection_type")
         if "session_status" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN session_status VARCHAR(20) DEFAULT 'ACTIVE'"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.session_status")
         if "timeline_data" not in cols:
             with eng.connect() as conn:
                 conn.execute(text("ALTER TABLE presence_sessions ADD COLUMN timeline_data TEXT"))
                 conn.commit()
-            print("[Migration] Added presence_sessions.timeline_data")
 
     # --- unknown_detections ---
     if "unknown_detections" in existing_tables:
@@ -134,35 +115,27 @@ def _apply_db_migrations(eng) -> None:
                     f"ALTER TABLE unknown_detections ADD COLUMN embedding {blob_type}"
                 ))
                 conn.commit()
-            print("[Migration] Added unknown_detections.embedding")
         if "timestamp" not in cols:
             with eng.connect() as conn:
                 conn.execute(text(
                     "ALTER TABLE unknown_detections ADD COLUMN timestamp DATETIME"
                 ))
                 conn.commit()
-            print("[Migration] Added unknown_detections.timestamp")
         if "camera_id" not in cols:
             with eng.connect() as conn:
                 conn.execute(text(
                     "ALTER TABLE unknown_detections ADD COLUMN camera_id VARCHAR(100)"
                 ))
                 conn.commit()
-            print("[Migration] Added unknown_detections.camera_id")
         if "confidence" not in cols:
             with eng.connect() as conn:
                 conn.execute(text(
                     "ALTER TABLE unknown_detections ADD COLUMN confidence FLOAT"
                 ))
                 conn.commit()
-            print("[Migration] Added unknown_detections.confidence")
 
 
 def _seed_clusters_from_scans(db) -> None:
-    """One-time back-fill of face_clusters from photo_scan.scan_details.
-
-    Only runs when the table is empty so it is safe to call on every startup.
-    """
     from datetime import datetime
 
     if db.query(FaceCluster).count() > 0:
@@ -208,16 +181,12 @@ def _seed_clusters_from_scans(db) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Apply DB column migrations (idempotent, runs every startup)
     _apply_db_migrations(engine)
-    # Create any brand-new tables (face_clusters etc.)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_default_accounts(db)
-        # Back-fill face_clusters table from scan history (one-time, no-op if populated)
         _seed_clusters_from_scans(db)
-        # Populate the FAISS vector index from all persisted face embeddings.
         from app.services.vector_index import face_index
         face_index.rebuild_from_db(db)
     finally:
@@ -336,7 +305,6 @@ app.add_middleware(
 )
 
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
-
 app.include_router(router, prefix=settings.API_V1_STR)
 app.include_router(device_router, prefix=settings.API_V1_STR)
 
@@ -347,7 +315,6 @@ async def websocket_endpoint(websocket: WebSocket):
     await gateway.connect(websocket, device_id=device_id, token=token)
     try:
         while True:
-            # Maintain connection, listen for any text (can be empty / heartbeats)
             await websocket.receive_text()
     except WebSocketDisconnect:
         gateway.disconnect(websocket)

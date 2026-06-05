@@ -6,14 +6,6 @@ from app.services.presence_tracker import presence_tracker, format_duration
 
 class MetricsAggregator:
     def aggregate_metrics(self, db: Session) -> dict:
-        """
-        Aggregate real-time metrics for the dashboard.
-        Calculates:
-        - Total unique known users seen (unique user_id)
-        - Total unique unknown sessions (unique sessions where person_type='unknown')
-        - Known time present (sum of ended known session durations + elapsed time of active known sessions)
-        - Unknown time present (sum of ended unknown session durations + elapsed time of active unknown sessions)
-        """
         now = datetime.utcnow()
 
         # 1. Total unique known users detected

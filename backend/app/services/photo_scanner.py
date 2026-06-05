@@ -1,5 +1,4 @@
 import numpy as np
-
 from app.core.config import settings
 from app.services.face_embedder import embedder
 from app.services.vector_index import face_index, cosine_similarity
@@ -44,21 +43,10 @@ def _assign_cluster(
     new_cluster_id: str,
     threshold: float,
 ) -> dict:
-    """Assign a cluster to *embedding*.
-
-    Search strategy (two-stage):
-    1. FAISS index  — fast O(log n) search across all historical faces.
-    2. within_scan_candidates — tiny linear scan (≤ ~20 faces) covering faces
-       already processed in the *current* photo that have not yet been flushed
-       to the index.  This prevents two faces in the same upload from being
-       incorrectly merged into one cluster before the index is updated.
-
-    The FAISS result wins if it is the highest-scoring match above threshold.
-    """
-    # --- 1. FAISS cross-scan search ---
+    # 1. FAISS cross-scan search
     faiss_result = face_index.search(embedding, k=1, threshold=threshold)
 
-    # --- 2. Within-scan linear scan (current photo only) ---
+    # 2. Within-scan linear scan (current photo only) 
     best_within: dict | None = None
     best_within_score = 0.0
     for candidate in within_scan_candidates:
@@ -169,9 +157,6 @@ def _classify_occlusion_risk(features: dict[str, bool], pose: str) -> str:
 def scan_faces_in_photo(image: np.ndarray, db=None, cluster_prefix: str = "upload") -> list[dict]:
     detected_faces = embedder.app.get(image)
     results = []
-    # Tracks faces already processed in *this* photo (not yet in the FAISS index).
-    # Keeps within-photo de-duplication correct without polluting the global index
-    # until the scan record is persisted and the index is updated by routes.py.
     within_scan_candidates: list[dict] = []
     threshold = settings.SIMILARITY_THRESHOLD
 
@@ -242,9 +227,6 @@ def scan_faces_in_photo(image: np.ndarray, db=None, cluster_prefix: str = "uploa
             },
             "embedding_vector": [float(value) for value in embedding],
         })
-        # Track in the within-scan list so subsequent faces in this same photo
-        # can find this assignment without reading the FAISS index (which is
-        # only updated after the scan record is committed).
         within_scan_candidates.append({
             "vector": embedding,
             "cluster_id": cluster["cluster_id"],

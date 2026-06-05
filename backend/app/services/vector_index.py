@@ -1,26 +1,17 @@
-"""
-vector_index.py
----------------
-Persistent ChromaDB vector index for face embedding nearest-neighbour search.
-Exposes standard service methods for vector operations.
-"""
-
-from __future__ import annotations
-
 import logging
 import threading
 import uuid
 import numpy as np
 import chromadb
 from app.core.config import settings
+from __future__ import annotations
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_DIM = 512   # ArcFace buffalo_l fixed output dimension
+EMBEDDING_DIM = 512   # ArcFace buffalo_l fixed output dimension, it has high accuracy in biometrics
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    """Cosine similarity between two 1-D float32 vectors. Range [-1, 1]."""
     denom = np.linalg.norm(a) * np.linalg.norm(b)
     if denom == 0.0:
         return 0.0
@@ -28,12 +19,10 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
-    """Euclidean (L2) distance between two 1-D float32 vectors. Range [0, ∞)."""
     return float(np.linalg.norm(a.astype(np.float32) - b.astype(np.float32)))
 
 
 def _serialize_metadata(meta: dict) -> dict:
-    """Clean metadata so that keys with None are omitted and all values are simple primitives."""
     clean_meta = {}
     for k, v in meta.items():
         if v is None:
@@ -46,7 +35,6 @@ def _serialize_metadata(meta: dict) -> dict:
 
 
 class ChromaIndex:
-    """ChromaDB-backed vector index implementing the original FaissIndex API."""
 
     def __init__(self, path: str = "chroma_db", collection_name: str = "enrolled_faces") -> None:
         self.path = path
@@ -64,12 +52,9 @@ class ChromaIndex:
             return self.collection.count()
 
     def add(self, embedding: np.ndarray, metadata: dict) -> None:
-        """Add *embedding* to the ChromaDB index with *metadata*."""
         raw = embedding.astype(np.float32)
-        # Ensure it is a 1D vector first
         flat_emb = raw.flatten()
         
-        # Generate unique ID
         if "user_id" in metadata and metadata["user_id"] is not None:
             uid = f"user-emb-{metadata['user_id']}-{uuid.uuid4().hex[:8]}"
         elif "cluster_id" in metadata:
@@ -91,12 +76,6 @@ class ChromaIndex:
         k: int = 1,
         threshold: float | None = None,
     ) -> dict | None:
-        """Return the best matching metadata dict or ``None``.
-
-        ChromaDB uses cosine distance (1.0 - cosine_similarity).
-        Therefore, similarity score = 1.0 - distance.
-        Matches when similarity score >= threshold.
-        """
         if self.size == 0:
             return None
 
@@ -165,7 +144,6 @@ class ChromaIndex:
         return len(ids)
 
     def rebuild_from_db(self, db) -> None:
-        """Populate the ChromaDB index from all persisted face embeddings."""
         from app.models.face_embedding import FaceEmbedding
         from app.models.photo_scan import PhotoScan
         from app.models.user import User
@@ -247,16 +225,7 @@ class ChromaIndex:
 
         logger.info("[ChromaIndex] Rebuilt collection from DB with %d vectors.", len(ids))
 
-
-# ---------------------------------------------------------------------------
-# Module-level singleton representing the vector index
-# ---------------------------------------------------------------------------
-face_index = ChromaIndex()
-
-
-# ---------------------------------------------------------------------------
-# Reusable Service methods for ChromaDB operations
-# ---------------------------------------------------------------------------
+face_index = ChromaIndex() # Reusable Service methods for ChromaDB operations
 
 def add_embedding(
     user_id: int,
@@ -265,7 +234,6 @@ def add_embedding(
     embedding: np.ndarray,
     angle: str | None = None,
 ) -> None:
-    """Store embedding in ChromaDB."""
     metadata = {
         "user_id": user_id,
         "name": name,
@@ -285,21 +253,17 @@ def update_embedding(
     embedding: np.ndarray,
     angle: str | None = None,
 ) -> None:
-    """Update embedding in ChromaDB by deleting previous and inserting new."""
     face_index.remove_by_user_id(user_id)
     add_embedding(user_id, name, photo_scan_id, embedding, angle)
 
 
 def delete_embedding(user_id: int) -> None:
-    """Delete all embeddings for a user in ChromaDB."""
     face_index.remove_by_user_id(user_id)
 
 
 def search_embedding(embedding: np.ndarray, threshold: float | None = None) -> dict | None:
-    """Search for the closest embedding matching the threshold."""
     return face_index.search(embedding, k=1, threshold=threshold)
 
 
 def rebuild_index(db) -> None:
-    """Rebuild ChromaDB from SQL database."""
     face_index.rebuild_from_db(db)
