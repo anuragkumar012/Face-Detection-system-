@@ -1,4 +1,4 @@
-# 📸 DeskTrack Employee Face-Recognition Monitoring & Attendance System
+# 📸 Employee Face-Recognition Monitoring & Attendance System
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-v0.100%2B-green?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -120,9 +120,9 @@ flowchart TD
 4. Configure the environment variables by creating a `.env` file:
     ```ini
     # Database Settings (Leave blank to fallback to SQLite automatically)
-    HOST=127.0.0.1
-    PORT=3306
-    USER=root
+    HOST=
+    PORT=
+    USER=
     PASSWORD=your_mysql_password
     DB_NAME=face Agent
 
@@ -134,8 +134,8 @@ flowchart TD
     CAMERA_SOURCE=0
 
     # Ngrok configuration (optional)
-    NGROK_AUTHTOKEN=your_ngrok_token
-    NGROK_DOMAIN=your_custom_subdomain.ngrok-free.dev
+    NGROK_AUTHTOKEN=
+    NGROK_DOMAIN=
     ```
 5. Initialize the database schema:
     ```bash
