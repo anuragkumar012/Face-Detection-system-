@@ -20,9 +20,7 @@ class Settings(BaseSettings):
     DB_NAME: str = "face Agent"
     DATABASE_URL: str = ""
     SIMILARITY_THRESHOLD: float = 0.5
-    # Metric used for embedding comparison: "cosine" (default) or "euclidean"
     SIMILARITY_METRIC: str = "cosine"
-    # Maximum L2 distance to accept as a match when SIMILARITY_METRIC="euclidean"
     EUCLIDEAN_THRESHOLD: float = 0.9
     UPLOAD_DIR: str = "./uploads"
     CAMERA_SOURCE: str = "0"
@@ -31,8 +29,6 @@ class Settings(BaseSettings):
     NGROK_DOMAIN: str | None = None
     DEFAULT_ADMIN_USERNAME: str = "admin"
     DEFAULT_ADMIN_PASSWORD: str = "admin123"
-    DEFAULT_USER_USERNAME: str = "user"
-    DEFAULT_USER_PASSWORD: str = "user123"
 
 
 settings = Settings()

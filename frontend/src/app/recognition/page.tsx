@@ -158,14 +158,14 @@ export default function RecognitionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[2rem] border border-amber-100 bg-white/90 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.35em] text-amber-600">
+      <div className="rounded-[2rem] border border-amber-100 bg-white/90 p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-600">
           Recognition
         </p>
-        <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900">
+        <h2 className="mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
           Laptop Camera Live Recognition
         </h2>
-        <p className="mt-4 max-w-3xl text-lg text-slate-600">
+        <p className="mt-2 max-w-3xl text-sm sm:text-base text-slate-600">
           The live preview uses the camera from the laptop or browser device that opens this
           page, and shares that preview to the admin page in realtime.
         </p>
@@ -183,10 +183,10 @@ export default function RecognitionPage() {
         <span
           className={`h-2 w-2 rounded-full ${
             backendStatus === "online"
-              ? "bg-green-500 animate-pulse"
+              ? "bg-green-500"
               : backendStatus === "offline"
               ? "bg-red-500"
-              : "bg-yellow-500 animate-pulse"
+              : "bg-yellow-500"
           }`}
         />
         {!backendUrl
@@ -199,7 +199,7 @@ export default function RecognitionPage() {
       </div>
 
       <section className="grid grid-cols-1 gap-6">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/95 p-6 shadow-lg">
+        <div className="rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-6 shadow-lg">
           <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">
@@ -213,18 +213,18 @@ export default function RecognitionPage() {
               </p>
             </div>
 
-            <form onSubmit={handlePhotoScan} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <form onSubmit={handlePhotoScan} className="flex flex-col gap-3 sm:flex-row sm:items-center w-full lg:w-auto">
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
-                className="max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
+                className="w-full lg:max-w-md rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
               />
               <button
                 type="submit"
                 disabled={backendStatus !== "online" || selectedFiles.length === 0 || scanStatus === "uploading"}
-                className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="w-full sm:w-auto rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300 shrink-0 text-center"
               >
                 {scanStatus === "uploading" ? "Scanning..." : "Scan Photos"}
               </button>

@@ -101,7 +101,7 @@ export default function PeoplePage() {
         }
       }
     } catch (err: unknown) {
-      console.error(err);
+      console.warn("Failed to fetch:", err);
       setError(err instanceof Error ? err.message : "Failed to load people database");
     } finally {
       setLoading(false);
@@ -309,22 +309,11 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
-      <div className="rounded-[2rem] border border-amber-100 bg-white/90 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.35em] text-amber-600">
-          People Category
-        </p>
-        <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900">
-          Clustered People & Albums
-        </h2>
-        <p className="mt-4 max-w-3xl text-lg text-slate-600">
-          Browse groups of faces recognized as the same individual. Utilize **Continuous Learning** to confirm identities (expanding face training vectors), merge person albums, and remove incorrect matches.
-        </p>
-      </div>
+
 
       {/* Merge Mode Action Banner */}
       {isMergeMode && (
-        <div className="rounded-[2rem] border border-indigo-200 bg-indigo-50 p-6 text-slate-900 shadow-md">
+        <div className="rounded-[2rem] border border-indigo-200 bg-indigo-50 p-5 sm:p-6 text-slate-900 shadow-md">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h4 className="text-lg font-black text-indigo-950">Merge Person Groups</h4>
@@ -529,20 +518,20 @@ export default function PeoplePage() {
       {/* Details Album Modal */}
       {selectedPerson && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="flex h-full max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl">
+          <div className="flex h-full max-h-[90vh] sm:max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 bg-slate-50/50 p-6">
-              <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-6">
+              <div className="flex gap-4 items-center min-w-0">
                 {getCoverUrl(selectedPerson) && (
                   <BackendImage
                     src={getCoverUrl(selectedPerson)}
                     alt={selectedPerson.label}
-                    className="h-16 w-16 rounded-2xl border border-slate-200 object-cover"
+                    className="h-16 w-16 rounded-2xl border border-slate-200 object-cover shrink-0"
                   />
                 )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-2xl font-black text-slate-900">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-2xl font-black text-slate-900 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
                       {selectedPerson.label}
                     </h3>
                     <span
@@ -555,7 +544,7 @@ export default function PeoplePage() {
                       {selectedPerson.is_registered ? "Registered" : "Unregistered"}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-500 truncate">
                     Album ID: {selectedPerson.cluster_id} · {selectedPerson.faces.length} appearance{selectedPerson.faces.length === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -568,7 +557,7 @@ export default function PeoplePage() {
                   setEnrollName("");
                   setModalActionError("");
                 }}
-                className="rounded-full bg-white p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition"
+                className="rounded-full bg-white p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition self-end sm:self-center shrink-0"
               >
                 ✕
               </button>

@@ -208,22 +208,17 @@ def _seed_clusters_from_scans(db) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Apply DB column migrations (idempotent, runs every startup)
     _apply_db_migrations(engine)
-    # Create any brand-new tables (face_clusters etc.)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_default_accounts(db)
-        # Back-fill face_clusters table from scan history (one-time, no-op if populated)
         _seed_clusters_from_scans(db)
-        # Populate the FAISS vector index from all persisted face embeddings.
         from app.services.vector_index import face_index
         face_index.rebuild_from_db(db)
     finally:
         db.close()
     
-    # Start ngrok tunnel if authtoken is present
     if settings.NGROK_AUTHTOKEN:
         try:
             from pyngrok import ngrok

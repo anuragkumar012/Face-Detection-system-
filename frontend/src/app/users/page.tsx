@@ -36,7 +36,7 @@ export default function UsersPage() {
           setUsers(data);
         }
       } catch (err) {
-        console.error("Failed to fetch users", err);
+        console.warn("Failed to fetch users", err);
       }
     };
 
@@ -97,30 +97,19 @@ export default function UsersPage() {
       const refreshedUsers = await refreshResponse.json();
       setUsers(refreshedUsers);
     } catch (err) {
-      console.error(err);
+      console.warn("Failed to enroll:", err);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[2rem] border border-amber-100 bg-white/90 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.35em] text-amber-600">
-          Users
-        </p>
-        <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900">
-          User Enrollment
-        </h2>
-        <p className="mt-4 max-w-3xl text-lg text-slate-600">
-          Add a user name and image, store the upload information in the database, and
-          make the records available to the admin page.
-        </p>
-      </div>
 
-      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] text-slate-900">
+
+      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] text-slate-900">
         <h3 className="mb-4 text-xl font-bold">Enroll New User</h3>
         {error && <div className="mb-4 text-red-500">{error}</div>}
-        <form onSubmit={handleEnroll} className="flex flex-col items-end gap-4 md:flex-row">
-          <div className="flex-1">
+        <form onSubmit={handleEnroll} className="flex flex-col gap-4 md:flex-row md:items-end">
+          <div className="flex-1 w-full">
             <label className="mb-1 block text-sm font-medium">Name</label>
             <input
               type="text"
@@ -130,7 +119,7 @@ export default function UsersPage() {
               placeholder="John Doe"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <label className="mb-1 block text-sm font-medium">Face Image</label>
             <input
               type="file"
@@ -143,17 +132,17 @@ export default function UsersPage() {
           <button
             type="submit"
             disabled={loading || !backendUrl}
-            className="rounded-full bg-slate-900 px-6 py-2 text-white hover:bg-slate-700 disabled:opacity-50"
+            className="w-full md:w-auto rounded-full bg-slate-900 px-6 py-2 text-white hover:bg-slate-700 disabled:opacity-50"
           >
             {loading ? "Enrolling..." : "Enroll User"}
           </button>
         </form>
       </div>
 
-      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] text-slate-900">
+      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] text-slate-900">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold">Enrolled Users</h3>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+          <span className="rounded-none px-3 py-1 text-sm font-bold tracking-[0.2em">
             {users.length} Total
           </span>
         </div>
@@ -162,30 +151,31 @@ export default function UsersPage() {
           {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center gap-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
+              className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
             >
-              {user.image_url ? (
-                <BackendImage
-                  src={user.image_url}
-                  alt={user.name}
-                  className="h-20 w-20 rounded-2xl object-cover"
-                />
-
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  No Photo
+              <div className="flex flex-1 items-center gap-4 min-w-0">
+                {user.image_url ? (
+                  <BackendImage
+                    src={user.image_url}
+                    alt={user.name}
+                    className="h-20 w-20 rounded-2xl object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-200 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    No Photo
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-lg font-bold text-slate-900">{user.name}</p>
+                  <p className="mt-1 text-sm text-slate-500">User ID: {user.id}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Enrolled {new Date(user.created_at).toLocaleString()}
+                  </p>
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-bold text-slate-900">{user.name}</p>
-                <p className="mt-1 text-sm text-slate-500">User ID: {user.id}</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Enrolled {new Date(user.created_at).toLocaleString()}
-                </p>
               </div>
               <button
                 onClick={() => handleDelete(user.id)}
-                className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                className="w-full sm:w-auto rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 shrink-0"
               >
                 Delete
               </button>

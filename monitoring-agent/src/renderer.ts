@@ -1,108 +1,111 @@
 interface Window {
   api: {
-    getAgentConfig: () => Promise<{ deviceId: string; deviceToken: string; backendUrl: string }>;
-    logEvent: (event: string, details: any) => void;
+    getServiceState: () => Promise<{ permissionGranted: boolean; serviceStarted: boolean; deviceId: string; deviceToken: string; backendUrl: string }>;
+    updateServiceState: (state: { permissionGranted?: boolean; serviceStarted?: boolean }) => Promise<{ permissionGranted: boolean; serviceStarted: boolean; deviceId: string; deviceToken: string; backendUrl: string }>;
+    quitApp: () => void;
+    logEvent: (event: string, details?: any) => void;
     cacheOfflineFrame: (buffer: ArrayBuffer) => void;
-    onConfigUpdated: (callback: (config: any) => void) => void;
+    onStateChanged: (callback: (state: any) => void) => void;
   };
 }
 
+let permissionGranted = false;
+let serviceStarted = false;
 let deviceId = '';
 let deviceToken = '';
 let backendUrl = '';
+
+let stream: MediaStream | null = null;
 let captureInterval: NodeJS.Timeout | null = null;
 let isUploading = false;
-let lastUploadStatus = true; // Track last upload to only log on transitions
 
-let ws: WebSocket | null = null;
-let reconnectWsTimeout: NodeJS.Timeout | null = null;
+// UI Elements
+const consentView = document.getElementById('consent-view') as HTMLDivElement;
+const controlView = document.getElementById('control-view') as HTMLDivElement;
 
-function connectWebSocket() {
-  if (!backendUrl) return;
+const btnDecline = document.getElementById('btn-decline') as HTMLButtonElement;
+const btnGrant = document.getElementById('btn-grant') as HTMLButtonElement;
+const btnRevoke = document.getElementById('btn-revoke') as HTMLButtonElement;
+const btnStartStop = document.getElementById('btn-start-stop') as HTMLButtonElement;
 
-  const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
-  const wsUrl = `${backendUrl.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws?device_id=${deviceId}&token=${deviceToken}`;
-
-  console.log("[WebSocket] Connecting to", wsUrl);
-  ws = new WebSocket(wsUrl);
-
-  ws.onopen = () => {
-    console.log("[WebSocket] Connected successfully");
-    window.api.logEvent('WebSocket Connected', { deviceId });
-  };
-
-  ws.onmessage = (event) => {
-    // Handle incoming frames/commands if needed
-  };
-
-  ws.onerror = (err) => {
-    console.error("[WebSocket] Error:", err);
-  };
-
-  ws.onclose = () => {
-    console.log("[WebSocket] Connection closed. Reconnecting in 3s...");
-    if (reconnectWsTimeout) clearTimeout(reconnectWsTimeout);
-    reconnectWsTimeout = setTimeout(connectWebSocket, 3000);
-  };
-}
+const statusIndicator = document.getElementById('status-indicator') as HTMLDivElement;
+const statusText = document.getElementById('status') as HTMLDivElement;
+const deviceIdLabel = document.getElementById('device-id-label') as HTMLDivElement;
+const backendLabel = document.getElementById('backend-label') as HTMLDivElement;
 
 const video = document.getElementById('webcam') as HTMLVideoElement;
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const statusDiv = document.getElementById('status') as HTMLDivElement;
+const cameraPlaceholder = document.getElementById('camera-placeholder') as HTMLDivElement;
+const placeholderText = document.getElementById('placeholder-text') as HTMLSpanElement;
 
-async function init() {
+const auditLogsContainer = document.getElementById('audit-logs-container') as HTMLDivElement;
+
+// Audit logging helper
+function addAuditLog(event: string) {
+  const timeStr = new Date().toLocaleTimeString();
+  const logLine = document.createElement('div');
+  logLine.className = 'audit-log-line';
+  logLine.innerHTML = `<span class="audit-time">[${timeStr}]</span><span class="audit-event">${event}</span>`;
+  auditLogsContainer.appendChild(logLine);
+  auditLogsContainer.scrollTop = auditLogsContainer.scrollHeight;
+}
+
+// Camera control helper
+async function startCamera() {
+  if (stream) return; // Camera already active
+
+  placeholderText.innerText = 'Connecting to camera...';
+  addAuditLog('Initializing camera stream...');
+
   try {
-    const config = await window.api.getAgentConfig();
-    deviceId = config.deviceId;
-    deviceToken = config.deviceToken;
-    backendUrl = config.backendUrl;
-
-    statusDiv.innerText = 'Connecting to camera...';
-    window.api.logEvent('Camera Started', { deviceId });
-
-    // Connect to WebSocket
-    connectWebSocket();
-
-    // Initialize Camera
-    const stream = await navigator.mediaDevices.getUserMedia({
+    stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
         frameRate: { ideal: 10 }
       },
       audio: false
     });
 
     video.srcObject = stream;
+    video.classList.remove('hidden');
+    cameraPlaceholder.classList.add('hidden');
 
-    video.onloadedmetadata = () => {
-      statusDiv.innerText = 'Camera streaming active. Uploading...';
-      startCapture();
-    };
+    startCapture();
+    addAuditLog('Webcam stream started successfully.');
+    window.api.logEvent('Camera Started', { deviceId });
   } catch (err: any) {
-    statusDiv.innerText = `Camera error: ${err.message}`;
+    placeholderText.innerText = `Camera error: ${err.message}`;
+    statusText.innerText = `Camera error: ${err.message}`;
+    addAuditLog(`Camera activation failed: ${err.message}`);
     window.api.logEvent('Camera Failed', { error: err.message });
   }
 }
 
-// Receive updated credentials/url dynamically if they change
-window.api.onConfigUpdated((config) => {
-  deviceId = config.deviceId;
-  deviceToken = config.deviceToken;
-  backendUrl = config.backendUrl;
-
-  if (ws) {
-    ws.close();
-  } else {
-    connectWebSocket();
+function stopCamera() {
+  if (captureInterval) {
+    clearInterval(captureInterval);
+    captureInterval = null;
   }
-});
 
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+    addAuditLog('Webcam stream stopped.');
+  }
+
+  video.srcObject = null;
+  video.classList.add('hidden');
+  cameraPlaceholder.classList.remove('hidden');
+  placeholderText.innerText = 'Camera Feed Inactive';
+}
+
+// Frame capture & transmission
 function startCapture() {
   if (captureInterval) clearInterval(captureInterval);
 
   captureInterval = setInterval(async () => {
-    if (isUploading) return;
+    if (isUploading || !stream || !serviceStarted) return;
     isUploading = true;
 
     try {
@@ -112,7 +115,7 @@ function startCapture() {
         return;
       }
 
-      // Resize to max width 640px preserving aspect ratio
+      // Resize logic
       const maxW = 640;
       let w = video.videoWidth || 640;
       let h = video.videoHeight || 480;
@@ -123,7 +126,6 @@ function startCapture() {
       canvas.width = w;
       canvas.height = h;
 
-      // Draw the video frame to the canvas
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(async (blob) => {
@@ -147,30 +149,13 @@ function startCapture() {
           });
 
           if (response.ok) {
-            statusDiv.innerText = 'Streaming live to company server.';
-            if (!lastUploadStatus) {
-              window.api.logEvent('Backend Reconnected', { deviceId });
-              lastUploadStatus = true;
-            }
+            statusText.innerText = 'Service Status: Running (Connected)';
           } else {
             throw new Error(`Server returned ${response.status}`);
           }
         } catch (uploadErr: any) {
-          statusDiv.innerText = 'Backend unavailable. Saving to local cache...';
-          
-          if (lastUploadStatus) {
-            window.api.logEvent('Backend Connection Lost', { error: uploadErr.message });
-            lastUploadStatus = false;
-          }
-
-          // Convert blob to ArrayBuffer and cache offline
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (reader.result instanceof ArrayBuffer) {
-              window.api.cacheOfflineFrame(reader.result);
-            }
-          };
-          reader.readAsArrayBuffer(blob);
+          statusText.innerText = 'Service Status: Running (Offline - Reconnecting...)';
+          // Per requirement 3, do NOT cache the frame offline.
         } finally {
           isUploading = false;
         }
@@ -183,5 +168,87 @@ function startCapture() {
   }, 500);
 }
 
-// Start
+// UI State Updater
+function updateUI(state: { permissionGranted: boolean; serviceStarted: boolean; deviceId: string; deviceToken: string; backendUrl: string }) {
+  permissionGranted = state.permissionGranted;
+  serviceStarted = state.serviceStarted;
+  deviceId = state.deviceId;
+  deviceToken = state.deviceToken;
+  backendUrl = state.backendUrl;
+
+  if (!permissionGranted) {
+    consentView.classList.remove('hidden');
+    controlView.classList.add('hidden');
+    stopCamera();
+    return;
+  }
+
+  consentView.classList.add('hidden');
+  controlView.classList.remove('hidden');
+
+  deviceIdLabel.innerText = `Device ID: ${deviceId || 'Registering...'}`;
+  backendLabel.innerText = `Backend: ${backendUrl}`;
+
+  if (serviceStarted) {
+    statusIndicator.className = 'status-dot active';
+    statusText.innerText = 'Service Status: Running';
+    btnStartStop.innerText = 'Stop Service';
+    btnStartStop.className = 'btn btn-secondary';
+    startCamera();
+  } else {
+    statusIndicator.className = 'status-dot stopped';
+    statusText.innerText = 'Service Status: Stopped';
+    btnStartStop.innerText = 'Start Service';
+    btnStartStop.className = 'btn btn-primary';
+    stopCamera();
+  }
+}
+
+// Event Listeners
+btnGrant.addEventListener('click', async () => {
+  addAuditLog('Granting consent and registering device...');
+  const newState = await window.api.updateServiceState({ permissionGranted: true });
+  addAuditLog('Consent registered.');
+  updateUI(newState);
+});
+
+btnDecline.addEventListener('click', () => {
+  addAuditLog('Consent declined. Exiting application.');
+  // Wait a split second to allow user to see log message
+  setTimeout(() => {
+    window.api.quitApp();
+  }, 300);
+});
+
+btnRevoke.addEventListener('click', async () => {
+  addAuditLog('Revoking consent...');
+  const newState = await window.api.updateServiceState({ permissionGranted: false });
+  addAuditLog('Consent revoked. Monitoring stopped.');
+  updateUI(newState);
+});
+
+btnStartStop.addEventListener('click', async () => {
+  const targetStart = !serviceStarted;
+  addAuditLog(`Turning service ${targetStart ? 'ON' : 'OFF'}...`);
+  const newState = await window.api.updateServiceState({ serviceStarted: targetStart });
+  addAuditLog(`Service ${targetStart ? 'started' : 'stopped'}.`);
+  updateUI(newState);
+});
+
+// Initialization
+async function init() {
+  addAuditLog('Connecting to monitoring agent service...');
+  try {
+    const state = await window.api.getServiceState();
+    updateUI(state);
+
+    window.api.onStateChanged((newState) => {
+      addAuditLog('State synchronization updated.');
+      updateUI(newState);
+    });
+  } catch (err: any) {
+    addAuditLog(`Initialization error: ${err.message}`);
+  }
+}
+
 init();

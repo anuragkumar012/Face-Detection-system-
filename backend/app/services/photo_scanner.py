@@ -169,9 +169,6 @@ def _classify_occlusion_risk(features: dict[str, bool], pose: str) -> str:
 def scan_faces_in_photo(image: np.ndarray, db=None, cluster_prefix: str = "upload") -> list[dict]:
     detected_faces = embedder.app.get(image)
     results = []
-    # Tracks faces already processed in *this* photo (not yet in the FAISS index).
-    # Keeps within-photo de-duplication correct without polluting the global index
-    # until the scan record is persisted and the index is updated by routes.py.
     within_scan_candidates: list[dict] = []
     threshold = settings.SIMILARITY_THRESHOLD
 

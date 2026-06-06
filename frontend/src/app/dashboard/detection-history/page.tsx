@@ -134,7 +134,7 @@ export default function DetectionHistoryPage() {
       const data = await response.json();
       setHistory(data.history || []);
     } catch (err: any) {
-      console.error(err);
+      console.warn("Fetch error:", err);
       setError(err.message || "Failed to load detection logs");
     } finally {
       setLoading(false);
@@ -147,14 +147,7 @@ export default function DetectionHistoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER BAR */}
-      <div className="rounded-[2rem] border border-amber-100 bg-white/90 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.35em] text-amber-600">Archive Logs</p>
-        <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900">Detection History Dashboard</h2>
-        <p className="mt-4 max-w-3xl text-lg text-slate-600">
-          Query complete presence logs, filter by timestamps, search unique identities, and view detailed recognition timelines with camera snapshots.
-        </p>
-      </div>
+
 
       {/* FILTER CONTROL CARD */}
       <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-md space-y-4">
@@ -256,7 +249,7 @@ export default function DetectionHistoryPage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
           <button
             onClick={() => {
               setDatePreset("TODAY");
@@ -267,13 +260,13 @@ export default function DetectionHistoryPage() {
               setDetectionType("ALL");
               setSearchName("");
             }}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            className="w-full sm:w-auto rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition text-center"
           >
             Reset Filters
           </button>
           <button
             onClick={fetchHistory}
-            className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-bold text-white hover:bg-slate-700 transition"
+            className="w-full sm:w-auto rounded-xl bg-slate-900 px-5 py-2 text-sm font-bold text-white hover:bg-slate-700 transition text-center"
           >
             Reload Logs
           </button>
@@ -361,7 +354,7 @@ export default function DetectionHistoryPage() {
                       {/* Exit time */}
                       <td className="py-3.5 text-slate-600">
                         {session.session_status === "ACTIVE" ? (
-                          <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-green-600 animate-pulse">
+                          <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-green-600">
                             <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                             Active
                           </span>
@@ -403,7 +396,7 @@ export default function DetectionHistoryPage() {
       {/* DETAIL VIEW MODAL */}
       {selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="flex h-full max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl">
+          <div className="flex h-full max-h-[90vh] sm:max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-6">
               <h3 className="text-xl font-black text-slate-950">Session Details (S{selectedSession.id})</h3>
@@ -417,21 +410,21 @@ export default function DetectionHistoryPage() {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="grid grid-cols-[120px_1fr] gap-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                 {/* Large Snapshot */}
                 {selectedSession.image_url ? (
                   <BackendImage
                     src={selectedSession.image_url}
                     alt={selectedSession.name}
-                    className="h-28 w-28 rounded-2xl object-cover border border-slate-200 shadow-sm"
+                    className="h-28 w-28 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0"
                   />
                 ) : (
-                  <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-slate-100 text-xs font-semibold text-slate-400 border border-slate-200">
+                  <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-xs font-semibold text-slate-400 border border-slate-200">
                     No Snapshot
                   </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-2 text-center sm:text-left">
                   <h4 className="text-2xl font-black text-slate-900">{selectedSession.name}</h4>
                   <div className="flex flex-wrap gap-2">
                     <span className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-wider ${

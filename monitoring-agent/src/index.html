@@ -1,15 +1,428 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
-  <title>Company Agent</title>
+  <title>Agent Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    /* Glassmorphism Container */
+    .app-container {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 640px;
+      min-height: 520px;
+      padding: 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Header styling */
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      background: linear-gradient(to right, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* View: Consent Screen */
+    #consent-view {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: space-between;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .consent-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      overflow-y: auto;
+      max-height: 320px;
+    }
+
+    .consent-card h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #cbd5e1;
+    }
+
+    .consent-card p {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .consent-card ul {
+      margin-left: 20px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .consent-card li {
+      margin-bottom: 5px;
+    }
+
+    /* View: Control Dashboard */
+    #control-view {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      animation: fadeIn 0.4s ease;
+    }
+
+    /* Status Banner */
+    .status-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 12px 20px;
+      margin-bottom: 15px;
+    }
+
+    .status-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.active {
+      background: var(--accent-green);
+      box-shadow: 0 0 12px var(--accent-green);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.stopped {
+      background: var(--accent-red);
+      box-shadow: 0 0 12px var(--accent-red);
+    }
+
+    .status-text {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .device-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* Video stream wrapper */
+    .stream-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      margin-bottom: 15px;
+      position: relative;
+    }
+
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .stream-placeholder {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .stream-placeholder svg {
+      width: 44px;
+      height: 44px;
+      stroke: var(--text-muted);
+    }
+
+    /* Controls Grid */
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--text-main);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: var(--accent-red);
+      color: var(--text-main);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Audit/Log Panel */
+    .audit-panel {
+      margin-top: 15px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+
+    .audit-header {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .audit-logs {
+      font-family: monospace;
+      font-size: 11px;
+      color: #a7f3d0;
+      max-height: 60px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .audit-log-line {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .audit-time {
+      color: #64748b;
+      margin-right: 10px;
+    }
+
+    .audit-event {
+      flex-grow: 1;
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+
+      50% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+    }
+  </style>
 </head>
-<body style="background: black; color: white; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;">
-  <h3>Company Monitoring Agent</h3>
-  <video id="webcam" autoplay playsinline style="width: 320px; height: 240px; border: 2px solid #333; border-radius: 8px; transform: scaleX(-1);"></video>
-  <canvas id="canvas" style="display: none;"></canvas>
-  <div id="status" style="margin-top: 10px; font-size: 12px; color: #aaa;">Initializing...</div>
+
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Monitoring Agent</h1>
+      <div class="subtitle" id="agent-subtitle">Employee Presence Verification & Control Panel</div>
+    </header>
+
+    <!-- Consent screen view -->
+    <div id="consent-view" class="hidden">
+      <div class="consent-card">
+        <h3>Consent & Privacy Disclosure</h3>
+        <p>This desktop agent is installed as part of the DeskTrack Employee Presence & Attendance management ecosystem.
+          It uses your device webcam to automatically verify presence and record attendance dynamically.</p>
+        <p><strong>Please read the following carefully before proceeding:</strong></p>
+        <ul>
+          <li><strong>Webcam Feed:</strong> The agent captures camera frames and submits them securely to the company's
+            DeskTrack backend for facial verification.</li>
+          <li><strong>Consent:</strong> Monitoring and data transmission are strictly opt-in. No monitoring, camera
+            checks, or communication will happen unless you explicitly grant permission.</li>
+          <li><strong>Revocation:</strong> You can grant or revoke consent at any time from this Control Panel. Revoking
+            consent immediately terminates all webcam activity.</li>
+          <li><strong>Real-time Transmission:</strong> When active, only live video data is transmitted. No screenshots
+            or logs are buffered locally or cached.</li>
+        </ul>
+        <p>By clicking "Grant Permission", you agree to enable monitoring capability and allow webcam presence checks
+          according to company workspace policies.</p>
+      </div>
+
+      <div class="button-group">
+        <button id="btn-decline" class="btn btn-secondary">Decline & Exit</button>
+        <button id="btn-grant" class="btn btn-primary">Grant Permission</button>
+      </div>
+    </div>
+
+    <!-- Control panel view -->
+    <div id="control-view" class="hidden">
+      <div class="status-panel">
+        <div class="status-info">
+          <div id="status-indicator" class="status-dot"></div>
+          <div id="status" class="status-text">Checking status...</div>
+        </div>
+        <div class="device-info">
+          <div id="device-id-label">Device ID: Registering...</div>
+          <div id="backend-label">Backend: Connecting...</div>
+        </div>
+      </div>
+
+      <div id="camera-preview" class="stream-wrapper">
+        <video id="webcam" autoplay playsinline class="hidden"></video>
+        <div id="camera-placeholder" class="stream-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          <span id="placeholder-text">Camera Feed Inactive</span>
+        </div>
+      </div>
+
+      <canvas id="canvas" style="display: none;"></canvas>
+
+      <div class="button-group">
+        <button id="btn-revoke" class="btn btn-danger">Revoke Permission</button>
+        <button id="btn-start-stop" class="btn btn-primary">Start Service</button>
+      </div>
+
+      <div class="audit-panel">
+        <div class="audit-header">Audit Logs (Current Session)</div>
+        <div id="audit-logs-container" class="audit-logs">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="../dist/renderer.js"></script>
 </body>
+
 </html>
