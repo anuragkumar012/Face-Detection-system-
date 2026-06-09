@@ -102,7 +102,7 @@ class WebSocketGateway:
                     self.device_live_cache[device_id]["last_seen"] = device.last_seen
 
             # 1. End all active sessions
-            presence_tracker.end_all_active_sessions(db, broadcast_callback=self.broadcast_sync)
+            presence_tracker.end_all_active_sessions(db, broadcast_callback=self.broadcast_sync, save_history=False)
 
             # 2. Gather metrics for this session period
             session_start = self.device_session_starts.get(device_id)

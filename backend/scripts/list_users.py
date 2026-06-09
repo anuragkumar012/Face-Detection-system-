@@ -1,6 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 import app.db.base
 from app.db.session import SessionLocal
 from app.models.user import User
+
 
 db = SessionLocal()
 try:

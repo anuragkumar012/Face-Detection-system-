@@ -444,6 +444,51 @@ class PresenceTracker:
                 db_session.timeline_data = json.dumps(session_info["timeline"])
                 db.commit()
 
+                # Store details in dashboard_session_histories table
+                try:
+                    from app.models.dashboard_session_history import DashboardSessionHistory
+                    from app.models.device import Device
+                    import socket
+
+                    local_hostname = socket.gethostname()
+                    dev = db.query(Device).filter(Device.hostname == local_hostname).first()
+                    if not dev:
+                        dev = db.query(Device).first()
+                    real_device_id = dev.device_id if dev else "local-webcam"
+
+                    imageUrl = None
+                    if db_session.best_frame_path:
+                        imageUrl = f"/uploads/{os.path.basename(db_session.best_frame_path)}"
+                    elif db_session.image_path:
+                        imageUrl = f"/uploads/{os.path.basename(db_session.image_path)}"
+
+                    log_entry = {
+                        "id": db_session.id,
+                        "name": db_session.name,
+                        "entry_time": db_session.entry_time.isoformat(),
+                        "exit_time": last_seen_time.isoformat(),
+                        "duration": duration,
+                        "imageUrl": imageUrl,
+                        "session_status": "COMPLETED",
+                        "detection_type": db_session.detection_type
+                    }
+
+                    history_entry = DashboardSessionHistory(
+                        device_id=real_device_id,
+                        session_start=db_session.entry_time,
+                        session_end=last_seen_time,
+                        total_known_persons=1 if db_session.detection_type == "KNOWN" else 0,
+                        total_unknown_persons=1 if db_session.detection_type == "UNKNOWN" else 0,
+                        known_time_present=duration if db_session.detection_type == "KNOWN" else 0.0,
+                        unknown_time_present=duration if db_session.detection_type == "UNKNOWN" else 0.0,
+                        presence_logs_json=json.dumps([log_entry])
+                    )
+                    db.add(history_entry)
+                    db.commit()
+                except Exception as ex:
+                    logger.error(f"Failed to save DashboardSessionHistory in check_expired_sessions: {ex}")
+
+
             # Broadcast attendance ended
             self.gateway.broadcast_attendance_ended(session_info["name"], session_info["user_id"], duration)
 
@@ -464,7 +509,7 @@ class PresenceTracker:
             self.recent_sessions.append(session_info)
             self.active_sessions.pop(person_id, None)
 
-    def end_all_active_sessions(self, db: Session, broadcast_callback=None) -> list[dict]:
+    def end_all_active_sessions(self, db: Session, broadcast_callback=None, save_history: bool = True) -> list[dict]:
         """End all active presence sessions immediately (e.g. when the agent goes offline)."""
         now = datetime.utcnow()
         ended_sessions_data = []
@@ -506,7 +551,7 @@ class PresenceTracker:
                 elif db_session.image_path:
                     imageUrl = f"/uploads/{os.path.basename(db_session.image_path)}"
                 
-                ended_sessions_data.append({
+                log_dict = {
                     "id": db_session.id,
                     "name": db_session.name,
                     "entry_time": db_session.entry_time.isoformat(),
@@ -515,7 +560,36 @@ class PresenceTracker:
                     "imageUrl": imageUrl,
                     "session_status": "COMPLETED",
                     "detection_type": db_session.detection_type
-                })
+                }
+                ended_sessions_data.append(log_dict)
+
+                if save_history:
+                    try:
+                        from app.models.dashboard_session_history import DashboardSessionHistory
+                        from app.models.device import Device
+                        import socket
+
+                        local_hostname = socket.gethostname()
+                        dev = db.query(Device).filter(Device.hostname == local_hostname).first()
+                        if not dev:
+                            dev = db.query(Device).first()
+                        real_device_id = dev.device_id if dev else "local-webcam"
+
+                        history_entry = DashboardSessionHistory(
+                            device_id=real_device_id,
+                            session_start=db_session.entry_time,
+                            session_end=last_seen_time,
+                            total_known_persons=1 if db_session.detection_type == "KNOWN" else 0,
+                            total_unknown_persons=1 if db_session.detection_type == "UNKNOWN" else 0,
+                            known_time_present=duration if db_session.detection_type == "KNOWN" else 0.0,
+                            unknown_time_present=duration if db_session.detection_type == "UNKNOWN" else 0.0,
+                            presence_logs_json=json.dumps([log_dict])
+                        )
+                        db.add(history_entry)
+                        db.commit()
+                    except Exception as ex:
+                        logger.error(f"Failed to save DashboardSessionHistory in end_all_active_sessions: {ex}")
+
 
             # Broadcast attendance ended
             self.gateway.broadcast_attendance_ended(session_info["name"], session_info["user_id"], duration)

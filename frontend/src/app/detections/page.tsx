@@ -211,7 +211,7 @@ export default function DetectionsPage() {
     }
 
     const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
-    const wsUrl = `${backendUrl.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws`;
+    const wsUrl = `${backendUrl.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws?ngrok-skip-browser-warning=true`;
 
     console.log("[WebSocket] Connecting to", wsUrl);
     let socket: WebSocket | null = null;

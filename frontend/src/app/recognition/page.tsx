@@ -342,7 +342,7 @@ export default function RecognitionPage() {
 
         <LiveCameraRecognition
           backendStatus={backendStatus}
-          backendUrl={backendUrl}
+          backendUrl={backendUrl ?? ""}
           publisherRole="user"
         />
 

@@ -79,7 +79,7 @@ export default function MonitoringSessionHistoryPage() {
     }
 
     const wsProtocol = backendUrl.startsWith("https") ? "wss" : "ws";
-    const wsUrl = `${backendUrl.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws`;
+    const wsUrl = `${backendUrl.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws?ngrok-skip-browser-warning=true`;
 
     const socket = new WebSocket(wsUrl);
 

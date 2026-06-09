@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     NGROK_DOMAIN: str | None = None
     DEFAULT_ADMIN_USERNAME: str = "admin"
     DEFAULT_ADMIN_PASSWORD: str = "admin123"
+    DEFAULT_USER_USERNAME: str = "user"
+    DEFAULT_USER_PASSWORD: str = "user123"
+
 
 
 settings = Settings()
